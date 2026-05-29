@@ -1,0 +1,6 @@
+{
+  "name": "LunchOS",
+  "description": "Multi-tenant lunch ordering system for corporate offices with role-based access and bulk ordering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
