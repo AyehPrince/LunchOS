@@ -36,7 +36,7 @@ export default function Login() {
       const success = await requestOtp(data.identifier);
       if (success) {
         setShowOtpInput(true);
-        toast.success('OTP sent to your device (check console)');
+        toast.success('OTP sent to your device check your email or phone');
       } else {
         toast.error('Failed to send OTP. Check if user exists.');
       }
@@ -148,7 +148,7 @@ export default function Login() {
                   setIsLoading(true);
                   const success = await requestOtp(identifier);
                   if (success) {
-                    toast.success('A new OTP code has been sent (check console)');
+                    toast.success('A new OTP code has been sent to your device check your email or phone');
                   } else {
                     toast.error('Failed to send a new OTP.');
                   }
