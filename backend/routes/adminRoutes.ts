@@ -463,7 +463,7 @@ router.patch('/plan', async (req: AuthRequest, res) => {
 // Admin Profile
 router.get('/profile', async (req: AuthRequest, res) => {
   try {
-    const result = await query('SELECT id, name, email, phone FROM users WHERE id = $1', [req.user.id]);
+    const result = await query('SELECT id, name, email, phone, pin FROM users WHERE id = $1', [req.user.id]);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

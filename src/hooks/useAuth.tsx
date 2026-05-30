@@ -15,6 +15,7 @@ interface AuthContextType {
   requestOtp: (identifier: string) => Promise<boolean>;
   login: (identifier: string, otp: string) => Promise<boolean>;
   loginSuperAdmin: () => Promise<boolean>;
+  loginWithToken: (token: string, user: any) => void;
   logout: () => void;
 }
 
@@ -55,6 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
   };
+  
+  const loginWithToken = (token: string, user: any) => {
+  localStorage.setItem('lunchos_token', token);
+  localStorage.setItem('lunchos_user', JSON.stringify(user));
+  setUser(user);
+};
 
   const loginSuperAdmin = async () => {
     try {
@@ -77,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, requestOtp, login, loginSuperAdmin, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, requestOtp, login, loginSuperAdmin, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

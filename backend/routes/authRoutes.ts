@@ -146,6 +146,46 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+// Login with PIN
+router.post('/login-pin', async (req, res) => {
+  const { identifier, pin } = req.body;
+  if (!identifier || !pin) {
+    return res.status(400).json({ message: 'Identifier and PIN required' });
+  }
+
+  try {
+    const userRes = await query(
+      'SELECT * FROM users WHERE (email = $1 OR phone = $1) AND is_active = TRUE',
+      [identifier]
+    );
+    const user = userRes.rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.pin) {
+      return res.status(400).json({ message: 'PIN not set for this account. Please use OTP login.' });
+    }
+
+    if (user.pin !== pin) {
+      return res.status(400).json({ message: 'Incorrect PIN' });
+    }
+
+    const token = generateToken({
+      id: user.id,
+      tenant_id: user.tenant_id,
+      role: user.role,
+      name: user.name,
+      department_id: user.department_id || null
+    });
+
+    res.json({ token, user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 export default router;

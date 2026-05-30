@@ -481,4 +481,28 @@ router.put('/users/:id', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// Set PIN
+router.post('/auth/set-pin', authMiddleware, async (req: AuthRequest, res) => {
+  const { pin } = req.body;
+  if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    return res.status(400).json({ message: 'PIN must be exactly 4 digits' });
+  }
+  try {
+    await query('UPDATE users SET pin = $1 WHERE id = $2', [pin, req.user.id]);
+    res.json({ message: 'PIN set successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Remove PIN
+router.delete('/auth/pin', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    await query('UPDATE users SET pin = NULL WHERE id = $1', [req.user.id]);
+    res.json({ message: 'PIN removed' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;
