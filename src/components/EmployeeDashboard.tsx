@@ -92,6 +92,20 @@ export default function EmployeeDashboard() {
     }
   });
 
+  const cancelMutation = useMutation({
+  mutationFn: async () => {
+    return axios.delete('/orders/today');
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['my-order'] });
+    queryClient.invalidateQueries({ queryKey: ['hod-live-orders-tracking'] });
+    toast.success('Order cancelled successfully!');
+  },
+  onError: (err: any) => {
+    toast.error(err.response?.data?.message || 'Failed to cancel order');
+  }
+});
+
   const handleConfirmOrder = () => {
     if (!selectedMeal) return;
     orderMutation.mutate(selectedMeal);
@@ -234,15 +248,26 @@ export default function EmployeeDashboard() {
                   <p className="text-xl font-bold text-gray-900">{currentOrder.menu_item_name}</p>
                 </div>
                 {!isPastDeadline && (
-                  <button 
-                    onClick={() => {
-                      setSelectedMeal(currentOrder.menu_item_id);
-                    }}
-                    className="flex items-center gap-2 text-blue-600 font-bold mx-auto hover:text-blue-700 hover:underline transition-all"
-                  >
-                    <Edit className="w-4 h-4" /> Change Selection
-                  </button>
-                )}
+  <div className="flex items-center justify-center gap-4">
+    <button onClick={() => {
+  setSelectedMeal(currentOrder.menu_item_id);
+  queryClient.setQueryData(['my-order'], null);
+}}
+      
+      className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-700 hover:underline transition-all"
+    >
+      <Edit className="w-4 h-4" /> Change Selection
+    </button>
+    <span className="text-gray-300">|</span>
+    <button 
+      onClick={() => cancelMutation.mutate()}
+      disabled={cancelMutation.isPending}
+      className="flex items-center gap-2 text-red-500 font-bold hover:text-red-600 hover:underline transition-all disabled:opacity-50"
+    >
+      <X className="w-4 h-4" /> {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+    </button>
+  </div>
+)}
               </div>
             ) : (
               <div className="space-y-4">

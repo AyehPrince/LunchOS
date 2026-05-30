@@ -30,14 +30,14 @@ async function startServer() {
   app.use(express.json());
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per IP
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   message: { message: 'Too many requests, please try again later.' }
 });
 
 const otpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 5, // max 5 OTP requests per IP
+  windowMs: 10 * 60 * 1000,
+  max: 15,
   message: { message: 'Too many OTP requests, please wait before trying again.' }
 });
 

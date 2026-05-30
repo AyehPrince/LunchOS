@@ -279,10 +279,10 @@ router.post('/vendors', async (req: AuthRequest, res) => {
     // Default to true if not defined
     const onSystemVal = on_system === undefined || on_system === null ? true : (String(on_system) === 'true' || on_system === true);
 
-    await query(
-      'INSERT INTO vendors (id, tenant_id, name, contact_info, is_active, on_system) VALUES ($1, $2, $3, $4, $5, $6)',
-      [id, req.user.tenant_id, name, contact_info, is_active, onSystemVal]
-    );
+  await query(
+  'INSERT INTO vendors (id, tenant_id, name, contact_info, is_active, on_system) VALUES ($1, $2, $3, $4, $5, $6)',
+  [id, req.user.tenant_id, name, contact_info, is_active, onSystemVal]
+);
     res.status(201).json({ id, message: 'Vendor added' });
   } catch (err) {
     console.error('Error adding vendor:', err);

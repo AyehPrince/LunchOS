@@ -33,12 +33,12 @@ router.get('/orders/today', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await query(
-      `SELECT o.*, m.name as menu_item_name 
-       FROM orders o 
-       JOIN menu_items m ON o.menu_item_id = m.id
-       WHERE o.user_id = $1 AND o.order_date = $2`,
-      [req.user.id, today]
-    );
+  `SELECT o.*, m.name as menu_item_name, o.menu_item_id
+   FROM orders o 
+   JOIN menu_items m ON o.menu_item_id = m.id
+   WHERE o.user_id = $1 AND o.order_date = $2`,
+  [req.user.id, today]
+);
     res.json(result.rows[0] || null);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -179,6 +179,37 @@ if (deadline) {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Cancel today's order
+router.delete('/orders/today', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    const deadlineRes = await query(
+      'SELECT cutoff_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1',
+      [req.user.tenant_id]
+    );
+    const deadline = deadlineRes.rows[0];
+    if (deadline) {
+      const now = new Date();
+      const [cutH, cutM] = deadline.cutoff_time.split(':');
+      const cutoff = new Date();
+      cutoff.setHours(parseInt(cutH), parseInt(cutM), 0, 0);
+      if (now > cutoff) {
+        return res.status(400).json({ message: 'Cannot cancel after ordering has closed.' });
+      }
+    }
+
+    const orderId = `${req.user.id}-${today}`;
+    await query('DELETE FROM orders WHERE id = $1 AND tenant_id = $2', [orderId, req.user.tenant_id]);
+    res.json({ message: 'Order cancelled successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get active vendor for HOD/Employee
 
 // Get active vendor for HOD/Employee
 router.get('/active-vendor', authMiddleware, async (req: AuthRequest, res) => {

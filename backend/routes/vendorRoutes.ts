@@ -11,39 +11,50 @@ function vendorOnly(req: AuthRequest, res: any, next: any) {
   next();
 }
 
+// Auto-link vendor user to their vendor record if not already linked
+async function getVendorId(userId: string, tenantId: string): Promise<string | null> {
+  // First try direct link via user_id
+  const direct = await query(
+    'SELECT id FROM vendors WHERE user_id = $1 AND tenant_id = $2 LIMIT 1',
+    [userId, tenantId]
+  );
+  if (direct.rows[0]) return direct.rows[0].id;
+
+  // Fallback: find unlinked system vendor and auto-link
+  const unlinked = await query(
+    'SELECT id FROM vendors WHERE tenant_id = $1 AND user_id IS NULL AND on_system = TRUE LIMIT 1',
+    [tenantId]
+  );
+  if (unlinked.rows[0]) {
+    await query('UPDATE vendors SET user_id = $1 WHERE id = $2', [userId, unlinked.rows[0].id]);
+    return unlinked.rows[0].id;
+  }
+
+  return null;
+}
+
 // Get vendor profile + their vendor record
 router.get('/profile', authMiddleware, vendorOnly, async (req: AuthRequest, res) => {
   try {
     const userRes = await query('SELECT id, name, email, phone FROM users WHERE id = $1', [req.user.id]);
-    const vendorRes = await query('SELECT id, name, contact_info, is_active, is_suspended FROM vendors WHERE tenant_id = $1 AND contact_info = $2 LIMIT 1',
-      [req.user.tenant_id, userRes.rows[0]?.phone || userRes.rows[0]?.email]
-    );
+    const vendorId = await getVendorId(req.user.id, req.user.tenant_id);
+    if (!vendorId) return res.status(404).json({ message: 'No vendor record linked to your account.' });
+
+    const vendorRes = await query('SELECT id, name, contact_info, is_active, is_suspended FROM vendors WHERE id = $1', [vendorId]);
     res.json({ user: userRes.rows[0], vendor: vendorRes.rows[0] || null });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get vendor's own record by matching their user account to a vendor entry
+// Get vendor's own record
 router.get('/me', authMiddleware, vendorOnly, async (req: AuthRequest, res) => {
   try {
-    // Find vendor linked to this user's tenant — vendors are linked by tenant
-    // A vendor user is tied to a vendor record via tenant_id and their user id stored in vendor table
-    const vendorRes = await query(
-      'SELECT * FROM vendors WHERE tenant_id = $1 AND id = $2',
-      [req.user.tenant_id, req.user.id]
-    );
+    const vendorId = await getVendorId(req.user.id, req.user.tenant_id);
+    if (!vendorId) return res.json(null);
 
-    // Fallback: find any vendor in the tenant that matches the user's name
-    if (vendorRes.rows.length === 0) {
-      const fallback = await query(
-        'SELECT * FROM vendors WHERE tenant_id = $1 LIMIT 1',
-        [req.user.tenant_id]
-      );
-      return res.json(fallback.rows[0] || null);
-    }
-
-    res.json(vendorRes.rows[0]);
+    const vendorRes = await query('SELECT * FROM vendors WHERE id = $1', [vendorId]);
+    res.json(vendorRes.rows[0] || null);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -54,16 +65,7 @@ router.get('/orders/today', authMiddleware, vendorOnly, async (req: AuthRequest,
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Find the vendor record linked to this user
-    const vendorRes = await query(
-      `SELECT v.id FROM vendors v
-       JOIN users u ON u.tenant_id = v.tenant_id
-       WHERE u.id = $1 AND v.tenant_id = $2
-       ORDER BY v.is_active DESC LIMIT 1`,
-      [req.user.id, req.user.tenant_id]
-    );
-
-    const vendorId = vendorRes.rows[0]?.id;
+    const vendorId = await getVendorId(req.user.id, req.user.tenant_id);
     if (!vendorId) return res.json({ orders: [], summary: [], total: 0 });
 
     const ordersRes = await query(
@@ -80,7 +82,6 @@ router.get('/orders/today', authMiddleware, vendorOnly, async (req: AuthRequest,
       [vendorId, today]
     );
 
-    // Summary grouped by meal
     const summaryRes = await query(
       `SELECT m.name as meal_name, COUNT(o.id)::int as quantity, SUM(o.total_price)::float as total_price
        FROM orders o
@@ -113,16 +114,8 @@ router.post('/orders/confirm-all', authMiddleware, vendorOnly, async (req: AuthR
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    const vendorRes = await query(
-      `SELECT v.id FROM vendors v
-       JOIN users u ON u.tenant_id = v.tenant_id
-       WHERE u.id = $1 AND v.tenant_id = $2
-       ORDER BY v.is_active DESC LIMIT 1`,
-      [req.user.id, req.user.tenant_id]
-    );
-
-    const vendorId = vendorRes.rows[0]?.id;
-    if (!vendorId) return res.status(404).json({ message: 'Vendor not found' });
+    const vendorId = await getVendorId(req.user.id, req.user.tenant_id);
+    if (!vendorId) return res.status(404).json({ message: 'No vendor record linked to your account.' });
 
     const result = await query(
       `UPDATE orders SET status = 'confirmed'
@@ -141,15 +134,7 @@ router.post('/orders/confirm-all', authMiddleware, vendorOnly, async (req: AuthR
 // Get vendor's menu items
 router.get('/menu', authMiddleware, vendorOnly, async (req: AuthRequest, res) => {
   try {
-    const vendorRes = await query(
-      `SELECT v.id FROM vendors v
-       JOIN users u ON u.tenant_id = v.tenant_id
-       WHERE u.id = $1 AND v.tenant_id = $2
-       ORDER BY v.is_active DESC LIMIT 1`,
-      [req.user.id, req.user.tenant_id]
-    );
-
-    const vendorId = vendorRes.rows[0]?.id;
+    const vendorId = await getVendorId(req.user.id, req.user.tenant_id);
     if (!vendorId) return res.json([]);
 
     const result = await query(
@@ -168,16 +153,8 @@ router.post('/menu', authMiddleware, vendorOnly, async (req: AuthRequest, res) =
   if (!name) return res.status(400).json({ message: 'Meal name required' });
 
   try {
-    const vendorRes = await query(
-      `SELECT v.id FROM vendors v
-       JOIN users u ON u.tenant_id = v.tenant_id
-       WHERE u.id = $1 AND v.tenant_id = $2
-       ORDER BY v.is_active DESC LIMIT 1`,
-      [req.user.id, req.user.tenant_id]
-    );
-
-    const vendorId = vendorRes.rows[0]?.id;
-    if (!vendorId) return res.status(404).json({ message: 'Vendor not found' });
+    const vendorId = await getVendorId(req.user.id, req.user.tenant_id);
+    if (!vendorId) return res.status(404).json({ message: 'No vendor record linked to your account.' });
 
     const id = uuidv4();
     await query(
