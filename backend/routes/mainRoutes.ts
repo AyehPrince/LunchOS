@@ -142,9 +142,16 @@ router.post('/orders', authMiddleware, async (req: AuthRequest, res) => {
       const cutoff = new Date();
       cutoff.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
       
-      if (now > cutoff) {
-        return res.status(400).json({ message: 'Ordering has closed for today.' });
-      }
+      const openingTime = new Date();
+openingTime.setHours(13, 0, 0, 0); // 1:00 PM
+
+if (now < openingTime) {
+  return res.status(400).json({ message: 'Ordering has not opened yet. Orders open at 1:00 PM.' });
+}
+
+if (now > cutoff) {
+  return res.status(400).json({ message: 'Ordering has closed for today.' });
+}
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -199,9 +206,9 @@ router.get('/team', authMiddleware, async (req: AuthRequest, res) => {
       );
     } else {
       result = await query(
-        'SELECT id, name, email, role, department_id, is_active FROM users WHERE tenant_id = $1 ORDER BY name ASC',
-        [req.user.tenant_id]
-      );
+  'SELECT id, name, email, role, department_id, is_active FROM users WHERE tenant_id = $1 AND role != $2 ORDER BY name ASC',
+  [req.user.tenant_id, 'vendor']
+);
     }
     res.json(result.rows);
   } catch (err) {
@@ -267,9 +274,16 @@ router.post('/orders/bulk', authMiddleware, async (req: AuthRequest, res) => {
       const cutoff = new Date();
       cutoff.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
       
-      if (now > cutoff) {
-        return res.status(400).json({ message: 'Ordering has closed for today.' });
-      }
+      const openingTime = new Date();
+openingTime.setHours(13, 0, 0, 0); // 1:00 PM
+
+if (now < openingTime) {
+  return res.status(400).json({ message: 'Ordering has not opened yet. Orders open at 1:00 PM.' });
+}
+
+if (now > cutoff) {
+  return res.status(400).json({ message: 'Ordering has closed for today.' });
+}
     }
 
     const today = new Date().toISOString().split('T')[0];

@@ -488,6 +488,14 @@ function ManageMenuModal({ vendorId, onClose }: { vendorId: string, onClose: () 
             {menu?.length === 0 && <p className="text-center text-gray-400 py-10">No items in menu yet</p>}
           </div>
         </div>
+        <div className="p-6 border-t border-gray-100 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-8 py-3 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all cursor-pointer"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );

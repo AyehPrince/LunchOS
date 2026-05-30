@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 
 import AdminDashboard from './components/AdminDashboard';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
+import VendorDashboard from './components/VendorDashboard';
 
 function ProtectedRoute({ children, allowedRoles }: { children: ReactNode, allowedRoles?: string[] }) {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -56,7 +57,7 @@ export default function App() {
             } />
             <Route path="/vendor" element={
               <ProtectedRoute allowedRoles={['vendor']}>
-                <div className="p-8">Vendor Dashboard (Coming soon)</div>
+                <VendorDashboard />
               </ProtectedRoute>
             } />
             <Route path="/" element={<HomeRedirect />} />

@@ -10,6 +10,7 @@ import authRoutes from "./backend/routes/authRoutes.js";
 import mainRoutes from "./backend/routes/mainRoutes.js";
 import adminRoutes from "./backend/routes/adminRoutes.js";
 import superAdminRoutes from "./backend/routes/superAdminRoutes.js";
+import vendorRoutes from "./backend/routes/vendorRoutes.js";
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/v1/auth/request-otp', otpLimiter);
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/admin", adminRoutes);
   app.use("/api/v1/super-admin", superAdminRoutes);
+  app.use("/api/v1/vendor", vendorRoutes);
   app.use("/api/v1", mainRoutes);
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", app: "LunchOS API" });

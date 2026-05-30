@@ -52,6 +52,8 @@ export default function Login() {
             navigate('/super-admin');
           } else if (userObj.role === 'admin') {
             navigate('/admin');
+          } else if (userObj.role === 'vendor') {
+            navigate('/vendor');
           } else {
             navigate('/dashboard');
           }
