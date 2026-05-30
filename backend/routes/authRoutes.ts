@@ -132,11 +132,12 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     const token = generateToken({
-      id: user.id,
-      tenant_id: user.tenant_id,
-      role: user.role,
-      name: user.name
-    });
+  id: user.id,
+  tenant_id: user.tenant_id,
+  role: user.role,
+  name: user.name,
+  department_id: user.department_id || null
+});
 
     res.json({ token, user });
   } catch (err) {

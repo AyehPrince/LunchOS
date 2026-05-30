@@ -389,6 +389,46 @@ router.post('/users', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// HOD can add employees to their own department
+router.post('/hod/employees', authMiddleware, async (req: AuthRequest, res) => {
+  if (req.user.role !== 'hod') return res.status(403).json({ message: 'HOD access only' });
+
+  const { name, email, phone, role } = req.body;
+  if (!name || !email) return res.status(400).json({ message: 'Name and email are required' });
+
+  // HOD can only assign employee or intern roles
+  const allowedRoles = ['employee', 'intern'];
+  if (role && !allowedRoles.includes(role)) {
+    return res.status(400).json({ message: 'HODs can only add employees or interns' });
+  }
+
+  try {
+    // Check employee limit
+    const tenantRes = await query('SELECT employee_limit FROM tenants WHERE id = $1', [req.user.tenant_id]);
+    const limit = tenantRes.rows[0].employee_limit;
+    const countRes = await query('SELECT count(*) FROM users WHERE tenant_id = $1', [req.user.tenant_id]);
+    const currentCount = parseInt(countRes.rows[0].count);
+
+    if (currentCount >= limit) {
+      return res.status(400).json({ message: `Employee limit reached (${limit}). Please contact your admin to upgrade.` });
+    }
+
+    const userId = uuidv4();
+    await query(
+      'INSERT INTO users (id, tenant_id, name, email, phone, role, department_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [userId, req.user.tenant_id, name, email, phone || null, role || 'employee', req.user.department_id]
+    );
+
+    res.status(201).json({ message: 'Employee added successfully' });
+  } catch (err: any) {
+    if (err.code === '23505') {
+      return res.status(400).json({ message: 'Email or phone already in use' });
+    }
+    console.error(err);
+    res.status(500).json({ message: 'Error adding employee' });
+  }
+});
+
 router.delete('/users/:id', authMiddleware, async (req: AuthRequest, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
   

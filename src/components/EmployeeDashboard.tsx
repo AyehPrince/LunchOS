@@ -205,6 +205,20 @@ export default function EmployeeDashboard() {
               Order For Department
             </button>
           )}
+          {isHod && (
+  <button
+    onClick={() => setActiveTab('dept-overview' as any)}
+    className={`py-4 font-black uppercase text-xs tracking-widest border-b-2 transition-all flex items-center gap-2 ${
+      activeTab === 'dept-overview' as any
+        ? 'border-blue-600 text-blue-600'
+        : 'border-transparent text-gray-400 hover:text-gray-900'
+    }`}
+  >
+    <Users className="w-4 h-4" />
+    Department Overview
+  </button>
+)}
+        
           <button
             onClick={() => setActiveTab('order-history')}
             className={`py-4 font-black uppercase text-xs tracking-widest border-b-2 transition-all flex items-center gap-2 ${
@@ -336,6 +350,8 @@ export default function EmployeeDashboard() {
           </div>
         ) : activeTab === 'dept-ordering' ? (
           <DepartmentOrderTab activeVendor={activeVendor} deadline={deadline} />
+        ) : activeTab === ('dept-overview' as any) ? (
+          <DepartmentOverviewTab />
         ) : (
           <OrderHistoryTab />
         )}
@@ -830,6 +846,150 @@ function OrderHistoryTab() {
             <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-sm mx-auto">
               Your previous order submissions from dates prior to today will accumulate here automatically.
             </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function DepartmentOverviewTab() {
+  const queryClient = useQueryClient();
+  const [isAdding, setIsAdding] = useState(false);
+
+  const { data: employees, isLoading: loadingEmployees } = useQuery({
+    queryKey: ['hod-dept-employees'],
+    queryFn: async () => {
+      const res = await axios.get('/team');
+      return res.data;
+    }
+  });
+
+  const { data: todayOrders, isLoading: loadingOrders } = useQuery({
+    queryKey: ['hod-dept-orders'],
+    queryFn: async () => {
+      const res = await axios.get('/hod/orders');
+      return res.data;
+    },
+    refetchInterval: 10000,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (data: any) => axios.post('/hod/employees', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hod-dept-employees'] });
+      setIsAdding(false);
+      toast.success('Employee added to your department!');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to add employee');
+    }
+  });
+
+  const orderedUserIds = new Set(todayOrders?.map((o: any) => o.user_id));
+  const orderedCount = employees?.filter((e: any) => orderedUserIds.has(e.id)).length || 0;
+  const totalCount = employees?.length || 0;
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center">
+          <p className="text-3xl font-black text-gray-900">{totalCount}</p>
+          <p className="text-xs font-bold text-gray-400 uppercase mt-1">Total Members</p>
+        </div>
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center">
+          <p className="text-3xl font-black text-green-600">{orderedCount}</p>
+          <p className="text-xs font-bold text-gray-400 uppercase mt-1">Ordered</p>
+        </div>
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center">
+          <p className="text-3xl font-black text-orange-500">{totalCount - orderedCount}</p>
+          <p className="text-xs font-bold text-gray-400 uppercase mt-1">Pending</p>
+        </div>
+      </div>
+
+      {/* Add Employee */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-black text-gray-900">Department Members</h3>
+        {!isAdding && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-600/20 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add Employee
+          </button>
+        )}
+      </div>
+
+      {isAdding && (
+        <div className="bg-white p-6 rounded-3xl border-2 border-blue-100 shadow-sm">
+          <h4 className="font-bold mb-4 text-gray-900">New Employee</h4>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            addMutation.mutate(Object.fromEntries(formData));
+          }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input name="name" placeholder="Full Name" className="p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500" required />
+            <input name="email" type="email" placeholder="Email Address" className="p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500" required />
+            <input name="phone" placeholder="WhatsApp / SMS Number" className="p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            <select name="role" className="p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="employee">Employee</option>
+              <option value="intern">Intern</option>
+            </select>
+            <div className="md:col-span-2 flex justify-end gap-3 mt-2">
+              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm font-bold text-gray-500 cursor-pointer">Cancel</button>
+              <button type="submit" disabled={addMutation.isPending} className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold text-sm cursor-pointer disabled:opacity-50">
+                {addMutation.isPending ? 'Adding...' : 'Add Employee'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Employee List */}
+      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+        {loadingEmployees || loadingOrders ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : employees?.length > 0 ? (
+          <div className="divide-y divide-gray-100">
+            {employees.map((emp: any) => {
+              const hasOrdered = orderedUserIds.has(emp.id);
+              const order = todayOrders?.find((o: any) => o.user_id === emp.id);
+              return (
+                <div key={emp.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-all">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`}
+                      className="w-10 h-10 rounded-xl"
+                      alt=""
+                    />
+                    <div>
+                      <p className="font-bold text-gray-900">{emp.name}</p>
+                      <p className="text-xs text-gray-400 font-medium">{emp.email}</p>
+                      {hasOrdered && order && (
+                        <p className="text-xs text-blue-600 font-bold mt-0.5">🍽 {order.menu_item_name}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase ${
+                      hasOrdered ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                    }`}>
+                      {hasOrdered ? 'Ordered' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-gray-300" />
+            </div>
+            <h4 className="font-black text-gray-900 mb-2">No department members yet</h4>
+            <p className="text-sm text-gray-400 font-medium">Add employees to your department using the button above.</p>
           </div>
         )}
       </div>
