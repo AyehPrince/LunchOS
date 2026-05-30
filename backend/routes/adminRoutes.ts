@@ -26,6 +26,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     const orders = await query('SELECT count(*), SUM(total_price) as total_cost FROM orders WHERE tenant_id = $1 AND order_date = $2', [tenantId, today]);
     const activeVendor = await query('SELECT id, name, contact_info, on_system FROM vendors WHERE tenant_id = $1 AND is_active = TRUE ORDER BY created_at ASC LIMIT 1', [tenantId]);
     const tenantRes = await query('SELECT employee_limit, subscription_plan, auto_send_summary, whatsapp_reminders FROM tenants WHERE id = $1', [tenantId]);
+    const deptCount = await query('SELECT count(*) FROM departments WHERE tenant_id = $1', [tenantId]);
     const deadlineRes = await query('SELECT cutoff_time, opening_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1', [tenantId]);
     // Insights: Orders by department
     const deptStats = await query(
@@ -52,7 +53,8 @@ router.get('/stats', async (req: AuthRequest, res) => {
       activeVendor: activeVendor.rows[0] || null,
       cutoffTime: deadlineRes.rows[0]?.cutoff_time || '19:00:00',
       openingTime: deadlineRes.rows[0]?.opening_time || '13:00:00',
-      departmentInsights: deptStats.rows
+      departmentInsights: deptStats.rows,
+      departmentCount: parseInt(deptCount.rows[0].count),
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

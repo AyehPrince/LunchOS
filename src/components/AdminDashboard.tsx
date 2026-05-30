@@ -26,7 +26,9 @@ import {
   MessageCircle,
   Copy,
   Info,
-  CheckSquare
+  CheckSquare,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -92,6 +94,7 @@ export default function AdminDashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  
 
   // Stats Query
   // Adding real-time polling (every 3 seconds) ensures that updates/activations
@@ -125,7 +128,7 @@ export default function AdminDashboard() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 ">
       {tenantStatus?.is_read_only && (
         <div className="bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white py-3 px-4 shadow-sm border-b border-red-700 font-sans z-50">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
@@ -1154,20 +1157,20 @@ function EmployeesTab({ stats }: { stats: any }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-black text-gray-900">Team Members</h3>
-          <p className="text-sm text-gray-500 font-medium">
-            {stats?.totalEmployees} / {stats?.employeeLimit || 20} seats used
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowDepts(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all"
-          >
-            Manage Departments
-          </button>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+  <div>
+    <h3 className="text-xl font-black text-gray-900">Team Members</h3>
+    <p className="text-sm text-gray-500 font-medium">
+      {stats?.totalEmployees} / {stats?.employeeLimit || 20} seats used
+    </p>
+  </div>
+  <div className="flex items-center gap-2 flex-wrap">
+    <button 
+      onClick={() => setShowDepts(true)}
+      className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all"
+    >
+      Manage Departments
+    </button>
           {!isAdding && (
             <button 
               onClick={() => {
@@ -1232,17 +1235,28 @@ function EmployeesTab({ stats }: { stats: any }) {
           <table className="w-full text-left min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
-                <th className="px-6 lg:px-8 py-4">Name</th>
-                <th className="px-6 lg:px-8 py-4">Contact Details</th>
-                <th className="px-6 lg:px-8 py-4">Role</th>
-                <th className="px-6 lg:px-8 py-4 text-right">Actions</th>
-              </tr>
+  <th className="px-4 lg:px-8 py-4">Name</th>
+  <th className="px-4 lg:px-8 py-4 hidden sm:table-cell">Contact Details</th>
+  <th className="px-4 lg:px-8 py-4 hidden sm:table-cell">Role</th>
+  <th className="px-4 lg:px-8 py-4 text-right">Actions</th>
+</tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {employees?.map((emp: any) => (
                 <tr key={emp.id} className="hover:bg-gray-50 transition-all group">
-                  <td className="px-6 lg:px-8 py-4 font-bold text-gray-900">{emp.name}</td>
-                  <td className="px-6 lg:px-8 py-4 text-gray-500 font-medium truncate max-w-[200px] lg:max-w-none">
+                  <td className="px-4 lg:px-8 py-4 font-bold text-gray-900">
+  <div>{emp.name}</div>
+  <div className="sm:hidden text-xs text-gray-400 font-medium mt-0.5">{emp.email}</div>
+  <span className={`sm:hidden mt-1 inline-block px-2 py-0.5 rounded-lg text-xs font-bold ${
+    !emp.is_active ? 'bg-red-50 text-red-600' :
+    emp.role === 'admin' ? 'bg-purple-50 text-purple-600' :
+    emp.role === 'hod' ? 'bg-orange-50 text-orange-600' :
+    'bg-gray-100 text-gray-600'
+  }`}>
+    {emp.is_active ? (emp.role || 'employee') : 'Suspended'}
+  </span>
+</td>
+<td className="px-4 lg:px-8 py-4 text-gray-500 font-medium hidden sm:table-cell">
                     <div className="space-y-0.5">
                       <div className="text-gray-800 font-semibold">{emp.email}</div>
                       {emp.phone && (
@@ -1250,16 +1264,16 @@ function EmployeesTab({ stats }: { stats: any }) {
                       )}
                     </div>
                   </td>
-                  <td className="px-6 lg:px-8 py-4 capitalize">
-                     <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                       !emp.is_active ? 'bg-red-50 text-red-600' :
-                       emp.role === 'admin' ? 'bg-purple-50 text-purple-600' :
-                       emp.role === 'hod' ? 'bg-orange-50 text-orange-600' :
-                       'bg-gray-100 text-gray-600'
-                     }`}>
-                       {emp.is_active ? (emp.role || 'employee') : 'Suspended'}
-                     </span>
-                  </td>
+                  <td className="px-4 lg:px-8 py-4 capitalize hidden sm:table-cell">
+  <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+    !emp.is_active ? 'bg-red-50 text-red-600' :
+    emp.role === 'admin' ? 'bg-purple-50 text-purple-600' :
+    emp.role === 'hod' ? 'bg-orange-50 text-orange-600' :
+    'bg-gray-100 text-gray-600'
+  }`}>
+    {emp.is_active ? (emp.role || 'employee') : 'Suspended'}
+  </span>
+</td>
                   <td className="px-6 lg:px-8 py-4 text-right">
                      {emp.id !== user?.id && (
                        <div className="flex justify-end gap-1 lg:gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all">
@@ -1558,7 +1572,7 @@ function VendorsTab({ onManageMenu }: { onManageMenu: (vendorId: string) => void
                         className={`w-6 h-6 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 ${vendor.is_suspended ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                       />
                     </div>
-                    <div className="pr-25">
+                    <div className="pr-16">
                       <h4 className="text-lg font-black text-gray-900 flex items-center gap-2">
                         {vendor.name}
                         {vendor.on_system === false ? (
@@ -1971,7 +1985,8 @@ function OverviewTab({ stats, onManageMenu, onSwitchTab }: { stats: any, onManag
 
   return (
     <div className="space-y-8">
-      {showUnordered && <UnorderedListModal onClose={() => setShowUnordered(false)} />}
+  {showUnordered && <UnorderedListModal onClose={() => setShowUnordered(false)} />}
+  <OnboardingChecklist stats={stats} onSwitchTab={onSwitchTab} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 leading-tight">Control Center</h2>
@@ -1990,7 +2005,7 @@ function OverviewTab({ stats, onManageMenu, onSwitchTab }: { stats: any, onManag
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Users} label="Total Employees" value={stats.totalEmployees} color="blue" />
         <StatCard icon={Utensils} label="Orders Today" value={stats.ordersToday} color="green" />
         <StatCard icon={AlertCircle} label="Pending Response" value={stats.totalEmployees - stats.ordersToday} color="orange" />
@@ -2005,14 +2020,14 @@ function OverviewTab({ stats, onManageMenu, onSwitchTab }: { stats: any, onManag
               {stats.activeVendor ? 'ACTIVE' : 'NO VENDOR SELECTED'}
             </span>
           </div>
-          <div className="flex items-center gap-6">
-             <div className="w-24 h-24 bg-gray-100 rounded-2xl flex items-center justify-center">
-               <Store className="w-10 h-10 text-gray-400" />
-             </div>
-             <div>
-               <h4 className="text-3xl font-black text-gray-900 mb-1">{stats.activeVendor?.name || '---'}</h4>
-               <p className="text-gray-500 font-medium">Providing meals for this week</p>
-               <div className="flex gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+  <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-2xl flex items-center justify-center shrink-0">
+    <Store className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+  </div>
+  <div className="flex-1">
+    <h4 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">{stats.activeVendor?.name || '---'}</h4>
+    <p className="text-gray-500 font-medium">Providing meals for this week</p>
+    <div className="flex flex-wrap gap-3 mt-4">
                  {stats.activeVendor && (
                    <button 
                     onClick={() => onManageMenu(stats.activeVendor.id)}
@@ -2233,6 +2248,79 @@ function OrdersTab({ orders }: { orders: any[] }) {
             NO ORDERS FOUND
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function OnboardingChecklist({ stats, onSwitchTab }: { stats: any, onSwitchTab: (tab: any) => void }) {
+  const hasVendor = !!stats?.activeVendor;
+  const hasDepartment = (stats?.departmentCount || 0) > 0;
+  const hasEmployee = (stats?.totalEmployees || 0) > 0;
+  const hasDeadline = stats?.cutoffTime && stats.cutoffTime !== '19:00:00';
+
+  const steps = [
+    { label: 'Register your company', done: true, action: null },
+    { label: 'Add your first vendor', done: hasVendor, action: () => onSwitchTab('vendors') },
+    { label: 'Add a department', done: hasDepartment, action: () => onSwitchTab('employees') },
+    { label: 'Add your first employee', done: hasEmployee, action: () => onSwitchTab('employees') },
+    { label: 'Set your order deadline', done: hasDeadline, action: () => onSwitchTab('settings' as any) },
+  ];
+
+  const completedCount = steps.filter(s => s.done).length;
+  const allDone = completedCount === steps.length;
+
+  if (allDone) return null;
+
+  return (
+    <div className="bg-white rounded-3xl border border-blue-100 p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-black text-gray-900">Getting Started 🚀</h3>
+          <p className="text-sm text-gray-400 font-medium">Complete these steps to set up your workspace</p>
+        </div>
+        <span className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+          {completedCount}/{steps.length} done
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full bg-gray-100 h-2 rounded-full mb-6 overflow-hidden">
+        <div
+          className="bg-blue-600 h-full rounded-full transition-all duration-700"
+          style={{ width: `${(completedCount / steps.length) * 100}%` }}
+        />
+      </div>
+
+      <div className="space-y-3">
+        {steps.map((step, i) => (
+          <div
+            key={i}
+            onClick={() => !step.done && step.action && step.action()}
+            className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+              step.done
+                ? 'bg-gray-50 opacity-60'
+                : step.action
+                ? 'bg-blue-50 border border-blue-100 cursor-pointer hover:bg-blue-100'
+                : 'bg-gray-50'
+            }`}
+          >
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+              step.done ? 'bg-green-500' : 'bg-white border-2 border-blue-300'
+            }`}>
+              {step.done
+                ? <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                : <span className="text-xs font-black text-blue-400">{i + 1}</span>
+              }
+            </div>
+            <span className={`font-bold text-sm flex-1 ${step.done ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+              {step.label}
+            </span>
+            {!step.done && step.action && (
+              <ChevronRight className="w-4 h-4 text-blue-400" />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
