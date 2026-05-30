@@ -26,8 +26,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     const orders = await query('SELECT count(*), SUM(total_price) as total_cost FROM orders WHERE tenant_id = $1 AND order_date = $2', [tenantId, today]);
     const activeVendor = await query('SELECT id, name, contact_info, on_system FROM vendors WHERE tenant_id = $1 AND is_active = TRUE ORDER BY created_at ASC LIMIT 1', [tenantId]);
     const tenantRes = await query('SELECT employee_limit, subscription_plan, auto_send_summary, whatsapp_reminders FROM tenants WHERE id = $1', [tenantId]);
-    const deadlineRes = await query('SELECT cutoff_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1', [tenantId]);
-    
+    const deadlineRes = await query('SELECT cutoff_time, opening_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1', [tenantId]);
     // Insights: Orders by department
     const deptStats = await query(
       `SELECT d.name, count(o.id) as order_count
@@ -51,7 +50,8 @@ router.get('/stats', async (req: AuthRequest, res) => {
       ordersToday: parseInt(orders.rows[0].count),
       totalCost: parseFloat(orders.rows[0].total_cost || 0),
       activeVendor: activeVendor.rows[0] || null,
-      cutoffTime: deadlineRes.rows[0]?.cutoff_time || '09:30:00',
+      cutoffTime: deadlineRes.rows[0]?.cutoff_time || '19:00:00',
+      openingTime: deadlineRes.rows[0]?.opening_time || '13:00:00',
       departmentInsights: deptStats.rows
     });
   } catch (err) {
@@ -220,21 +220,21 @@ router.get('/orders/summary', async (req: AuthRequest, res) => {
 router.get('/deadline', async (req: AuthRequest, res) => {
   try {
     const result = await query('SELECT * FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1', [req.user.tenant_id]);
-    res.json(result.rows[0]);
+    res.json(result.rows[0] || { cutoff_time: '19:00:00', opening_time: '13:00:00' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 router.post('/deadline', async (req: AuthRequest, res) => {
-  const { cutoff_time } = req.body;
+  const { cutoff_time, opening_time } = req.body;
   try {
     const id = req.user.tenant_id + '-deadline';
     await query(
-      `INSERT INTO order_deadlines (id, tenant_id, cutoff_time) 
-       VALUES ($1, $2, $3) 
-       ON CONFLICT (id) DO UPDATE SET cutoff_time = $3`,
-      [id, req.user.tenant_id, cutoff_time]
+      `INSERT INTO order_deadlines (id, tenant_id, cutoff_time, opening_time) 
+       VALUES ($1, $2, $3, $4) 
+       ON CONFLICT (id) DO UPDATE SET cutoff_time = $3, opening_time = $4`,
+      [id, req.user.tenant_id, cutoff_time, opening_time || '13:00:00']
     );
     res.json({ message: 'Deadline updated' });
   } catch (err) {

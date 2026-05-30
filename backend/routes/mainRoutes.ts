@@ -131,28 +131,30 @@ router.post('/orders', authMiddleware, async (req: AuthRequest, res) => {
 
   try {
     // 1. Enforce order deadline (cutoff time) on the backend
-    const deadlineRes = await query(
-      'SELECT cutoff_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1',
-      [req.user.tenant_id]
-    );
-    const deadline = deadlineRes.rows[0];
-    if (deadline) {
-      const now = new Date();
-      const [hours, minutes] = deadline.cutoff_time.split(':');
-      const cutoff = new Date();
-      cutoff.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-      
-      const openingTime = new Date();
-openingTime.setHours(13, 0, 0, 0); // 1:00 PM
+  const deadlineRes = await query(
+  'SELECT cutoff_time, opening_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1',
+  [req.user.tenant_id]
+);
+const deadline = deadlineRes.rows[0];
+if (deadline) {
+  const now = new Date();
 
-if (now < openingTime) {
-  return res.status(400).json({ message: 'Ordering has not opened yet. Orders open at 1:00 PM.' });
-}
+  const [openH, openM] = (deadline.opening_time || '13:00').split(':');
+  const openingTime = new Date();
+  openingTime.setHours(parseInt(openH, 10), parseInt(openM, 10), 0, 0);
 
-if (now > cutoff) {
-  return res.status(400).json({ message: 'Ordering has closed for today.' });
+  const [cutH, cutM] = deadline.cutoff_time.split(':');
+  const cutoff = new Date();
+  cutoff.setHours(parseInt(cutH, 10), parseInt(cutM, 10), 0, 0);
+
+  if (now < openingTime) {
+    return res.status(400).json({ message: `Ordering has not opened yet. Orders open at ${deadline.opening_time?.slice(0, 5) || '13:00'}.` });
+  }
+
+  if (now > cutoff) {
+    return res.status(400).json({ message: 'Ordering has closed for today.' });
+  }
 }
-    }
 
     const today = new Date().toISOString().split('T')[0];
     const itemId = menuItemId;
@@ -264,27 +266,29 @@ router.post('/orders/bulk', authMiddleware, async (req: AuthRequest, res) => {
   try {
     // Enforce order deadline (cutoff time) on the backend for bulk orders too
     const deadlineRes = await query(
-      'SELECT cutoff_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1',
-      [req.user.tenant_id]
-    );
-    const deadline = deadlineRes.rows[0];
-    if (deadline) {
-      const now = new Date();
-      const [hours, minutes] = deadline.cutoff_time.split(':');
-      const cutoff = new Date();
-      cutoff.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-      
-      const openingTime = new Date();
-openingTime.setHours(13, 0, 0, 0); // 1:00 PM
+  'SELECT cutoff_time, opening_time FROM order_deadlines WHERE tenant_id = $1 AND is_active = TRUE LIMIT 1',
+  [req.user.tenant_id]
+);
+const deadline = deadlineRes.rows[0];
+if (deadline) {
+  const now = new Date();
 
-if (now < openingTime) {
-  return res.status(400).json({ message: 'Ordering has not opened yet. Orders open at 1:00 PM.' });
-}
+  const [openH, openM] = (deadline.opening_time || '13:00').split(':');
+  const openingTime = new Date();
+  openingTime.setHours(parseInt(openH, 10), parseInt(openM, 10), 0, 0);
 
-if (now > cutoff) {
-  return res.status(400).json({ message: 'Ordering has closed for today.' });
+  const [cutH, cutM] = deadline.cutoff_time.split(':');
+  const cutoff = new Date();
+  cutoff.setHours(parseInt(cutH, 10), parseInt(cutM, 10), 0, 0);
+
+  if (now < openingTime) {
+    return res.status(400).json({ message: `Ordering has not opened yet. Orders open at ${deadline.opening_time?.slice(0, 5) || '13:00'}.` });
+  }
+
+  if (now > cutoff) {
+    return res.status(400).json({ message: 'Ordering has closed for today.' });
+  }
 }
-    }
 
     const today = new Date().toISOString().split('T')[0];
     

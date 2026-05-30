@@ -605,25 +605,28 @@ function SettingsTab({ stats }: { stats: any }) {
   const queryClient = useQueryClient();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [cutoffTime, setCutoffTime] = useState('');
-  const { data: deadline } = useQuery({
-    queryKey: ['admin-deadline'],
-    queryFn: async () => {
-      const res = await axios.get('/admin/deadline');
-      return res.data;
-    }
-  });
+const [openingTime, setOpeningTime] = useState('');
+const { data: deadline } = useQuery({
+  queryKey: ['admin-deadline'],
+  queryFn: async () => {
+    const res = await axios.get('/admin/deadline');
+    return res.data;
+  }
+});
 
-  useEffect(() => {
-    if (deadline?.cutoff_time) {
-      // Input type="time" expects HH:mm
-      setCutoffTime(deadline.cutoff_time.slice(0, 5));
-    }
-  }, [deadline]);
+useEffect(() => {
+  if (deadline?.cutoff_time) {
+    setCutoffTime(deadline.cutoff_time.slice(0, 5));
+  }
+  if (deadline?.opening_time) {
+    setOpeningTime(deadline.opening_time.slice(0, 5));
+  }
+}, [deadline]);
 
   const deadlineMutation = useMutation({
-    mutationFn: async (time: string) => {
-      return axios.post('/admin/deadline', { cutoff_time: time });
-    },
+  mutationFn: async ({ cutoffTime, openingTime }: { cutoffTime: string, openingTime: string }) => {
+    return axios.post('/admin/deadline', { cutoff_time: cutoffTime, opening_time: openingTime });
+  },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-deadline'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
@@ -667,17 +670,30 @@ function SettingsTab({ stats }: { stats: any }) {
         <p className="text-gray-500 mb-6 font-medium">Set the time when ordering closes for the day.</p>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <input 
-            type="time" 
-            value={cutoffTime}
-            onChange={(e) => setCutoffTime(e.target.value)}
-            className="p-4 bg-gray-50 rounded-2xl border-none font-bold text-xl outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            id="cutoff-input"
-          />
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-black text-gray-400 uppercase ml-1">Opening Time</label>
+    <input 
+      type="time" 
+      value={openingTime}
+      onChange={(e) => setOpeningTime(e.target.value)}
+      className="p-4 bg-gray-50 rounded-2xl border-none font-bold text-xl outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+    />
+  </div>
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-black text-gray-400 uppercase ml-1">Closing Time</label>
+    <input 
+      type="time" 
+      value={cutoffTime}
+      onChange={(e) => setCutoffTime(e.target.value)}
+      className="p-4 bg-gray-50 rounded-2xl border-none font-bold text-xl outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+    />
+  </div>
+</div>
           <button 
             onClick={() => {
               if (!cutoffTime) return toast.error('Please select a time');
-              deadlineMutation.mutate(cutoffTime);
+              deadlineMutation.mutate({ cutoffTime, openingTime });
             }}
             className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-black shadow-lg shadow-gray-200 hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
           >
