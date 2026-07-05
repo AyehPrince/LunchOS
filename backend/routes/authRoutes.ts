@@ -4,6 +4,7 @@ import { generateToken } from '../auth.js';
 import { addMinutes } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { notificationService } from '../services/notificationService.js';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
@@ -139,6 +140,7 @@ router.post('/verify-otp', async (req, res) => {
   department_id: user.department_id || null
 });
 
+    delete user.pin;
     res.json({ token, user });
   } catch (err) {
     console.error(err);
@@ -168,7 +170,8 @@ router.post('/login-pin', async (req, res) => {
       return res.status(400).json({ message: 'PIN not set for this account. Please use OTP login.' });
     }
 
-    if (user.pin !== pin) {
+    const pinMatches = await bcrypt.compare(pin, user.pin);
+    if (!pinMatches) {
       return res.status(400).json({ message: 'Incorrect PIN' });
     }
 
@@ -180,6 +183,7 @@ router.post('/login-pin', async (req, res) => {
       department_id: user.department_id || null
     });
 
+    delete user.pin;
     res.json({ token, user });
   } catch (err) {
     console.error(err);

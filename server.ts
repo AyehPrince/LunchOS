@@ -41,8 +41,15 @@ const otpLimiter = rateLimit({
   message: { message: 'Too many OTP requests, please wait before trying again.' }
 });
 
+const pinLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many PIN login attempts. Please wait 15 minutes or use OTP login instead.' }
+});
+
 app.use('/api/', limiter);
 app.use('/api/v1/auth/request-otp', otpLimiter);
+app.use('/api/v1/auth/login-pin', pinLoginLimiter);
 
   // API v1 Routes
   app.use("/api/v1/auth", authRoutes);

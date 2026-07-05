@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Clock, Check, Edit, Users, X, Bell, LogOut, Utensils, Search, Store, Loader2, Plus, History } from 'lucide-react';
+import { Clock, Check, Edit, Users, X, Bell, LogOut, Utensils, Search, Store, Loader2, Plus, History, User as UserIcon } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from '../lib/axios';
 import toast from 'react-hot-toast';
+import PinManager from './PinManager';
 
 export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
@@ -11,6 +12,7 @@ export default function EmployeeDashboard() {
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'my-lunch' | 'dept-ordering' | 'order-history'>('my-lunch');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Fetch active vendor for HOD/Employee
   // Real-time polling is added here (every 3 seconds) to ensure that if an admin 
@@ -165,6 +167,12 @@ export default function EmployeeDashboard() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowProfile(true)}
+              className="p-2 text-gray-400 hover:text-gray-600"
+            >
+              <UserIcon className="w-6 h-6" />
+            </button>
             <button 
               onClick={() => setShowNotifications(true)} 
               className="p-2 text-gray-400 hover:text-gray-600 relative"
@@ -364,6 +372,41 @@ export default function EmployeeDashboard() {
           onClose={() => setShowNotifications(false)} 
         />
       )}
+      {showProfile && (
+        <ProfileModal onClose={() => setShowProfile(false)} />
+      )}
+    </div>
+  );
+}
+
+function ProfileModal({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+          <h3 className="text-xl font-black text-gray-900">My Profile</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full">
+            <Plus className="w-6 h-6 rotate-45" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-8 flex-1 space-y-6">
+          <div className="flex flex-col items-center mb-2">
+            <div className="w-24 h-24 bg-gray-100 rounded-full overflow-hidden border-4 border-blue-50 mb-4">
+              <img src={`https://ui-avatars.com/api/?name=${user?.name}&background=random`} alt="avatar" className="w-full h-full object-cover" />
+            </div>
+            <p className="font-black text-gray-900 text-lg">{user?.name}</p>
+            <p className="text-sm font-bold text-gray-400 capitalize">{user?.role}</p>
+          </div>
+
+          <div className="space-y-1 pt-4 border-t border-gray-100">
+            <label className="text-xs font-black text-gray-400 uppercase ml-1">PIN Login</label>
+            <p className="text-xs text-gray-400 ml-1 mb-3">Set a 4-digit PIN as a backup login method</p>
+            <PinManager />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

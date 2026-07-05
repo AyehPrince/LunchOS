@@ -2,6 +2,7 @@ import express from 'express';
 import { query } from '../db.js';
 import { authMiddleware, AuthRequest } from '../auth.js';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
@@ -220,6 +221,23 @@ router.get('/active-vendor', authMiddleware, async (req: AuthRequest, res) => {
     );
     res.json(result.rows[0] || null);
   } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get current user's own profile (any authenticated role)
+router.get('/profile', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const result = await query(
+      'SELECT id, name, email, phone, role, pin IS NOT NULL AS "hasPin" FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching profile:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -488,7 +506,8 @@ router.post('/auth/set-pin', authMiddleware, async (req: AuthRequest, res) => {
     return res.status(400).json({ message: 'PIN must be exactly 4 digits' });
   }
   try {
-    await query('UPDATE users SET pin = $1 WHERE id = $2', [pin, req.user.id]);
+    const hashedPin = await bcrypt.hash(pin, 10);
+    await query('UPDATE users SET pin = $1 WHERE id = $2', [hashedPin, req.user.id]);
     res.json({ message: 'PIN set successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

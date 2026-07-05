@@ -3,16 +3,18 @@ import { useAuth } from '../hooks/useAuth';
 import {
   Utensils, LogOut, ShoppingBag, Menu,
   Plus, Trash2, Check, Loader2, Clock,
-  ChevronRight, EyeOff, Eye
+  ChevronRight, EyeOff, Eye, User as UserIcon
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from '../lib/axios';
 import toast from 'react-hot-toast';
+import PinManager from './PinManager';
 
 export default function VendorDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -26,9 +28,14 @@ export default function VendorDashboard() {
             </div>
             <h1 className="text-xl font-black text-gray-900 tracking-tight">Lunch<span className="text-green-600">OS</span> <span className="text-sm font-bold text-gray-400">Vendor</span></h1>
           </div>
-          <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-2 text-gray-400">
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowProfile(true)} className="p-2 text-gray-400">
+              <UserIcon className="w-6 h-6" />
+            </button>
+            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-2 text-gray-400">
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Sidebar Overlay */}
@@ -45,15 +52,19 @@ export default function VendorDashboard() {
               </div>
               <h1 className="text-xl font-black text-gray-900 tracking-tight">Lunch<span className="text-green-600">OS</span></h1>
             </div>
-            <div className="mt-4 p-3 bg-green-50 rounded-2xl">
+            <button
+              onClick={() => { setShowProfile(true); setShowMobileMenu(false); }}
+              className="mt-4 p-3 bg-green-50 rounded-2xl w-full text-left hover:bg-green-100 transition-all cursor-pointer"
+            >
               <p className="text-xs font-black text-green-700 uppercase tracking-widest">Vendor Portal</p>
               <p className="font-bold text-gray-900 mt-0.5 truncate">{user?.name}</p>
-            </div>
+            </button>
           </div>
 
           <nav className="flex-1 p-4 space-y-2">
             <NavItem icon={ShoppingBag} label="Today's Orders" active={activeTab === 'orders'} onClick={() => { setActiveTab('orders'); setShowMobileMenu(false); }} />
             <NavItem icon={Utensils} label="My Menu" active={activeTab === 'menu'} onClick={() => { setActiveTab('menu'); setShowMobileMenu(false); }} />
+            <NavItem icon={UserIcon} label="Profile" active={false} onClick={() => { setShowProfile(true); setShowMobileMenu(false); }} />
           </nav>
 
           <div className="p-4 border-t border-gray-100">
@@ -67,9 +78,17 @@ export default function VendorDashboard() {
         <main className="flex-1 flex flex-col min-w-0">
           <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20">
             <h2 className="text-lg font-bold text-gray-900 capitalize">{activeTab === 'orders' ? "Today's Orders" : 'My Menu'}</h2>
-            <div className="flex items-center gap-2 text-sm font-bold text-gray-400">
-              <Clock className="w-4 h-4" />
-              {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-400">
+                <Clock className="w-4 h-4" />
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </div>
+              <button
+                onClick={() => setShowProfile(true)}
+                className="hidden md:flex p-2 text-gray-400 hover:text-gray-600"
+              >
+                <UserIcon className="w-5 h-5" />
+              </button>
             </div>
           </header>
 
@@ -78,6 +97,42 @@ export default function VendorDashboard() {
             {activeTab === 'menu' && <MenuTab />}
           </div>
         </main>
+      </div>
+
+      {showProfile && (
+        <ProfileModal onClose={() => setShowProfile(false)} />
+      )}
+    </div>
+  );
+}
+
+function ProfileModal({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+          <h3 className="text-xl font-black text-gray-900">My Profile</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full">
+            <Plus className="w-6 h-6 rotate-45" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-8 flex-1 space-y-6">
+          <div className="flex flex-col items-center mb-2">
+            <div className="w-24 h-24 bg-gray-100 rounded-full overflow-hidden border-4 border-green-50 mb-4">
+              <img src={`https://ui-avatars.com/api/?name=${user?.name}&background=random`} alt="avatar" className="w-full h-full object-cover" />
+            </div>
+            <p className="font-black text-gray-900 text-lg">{user?.name}</p>
+            <p className="text-sm font-bold text-gray-400 capitalize">{user?.role}</p>
+          </div>
+
+          <div className="space-y-1 pt-4 border-t border-gray-100">
+            <label className="text-xs font-black text-gray-400 uppercase ml-1">PIN Login</label>
+            <p className="text-xs text-gray-400 ml-1 mb-3">Set a 4-digit PIN as a backup login method</p>
+            <PinManager />
+          </div>
+        </div>
       </div>
     </div>
   );

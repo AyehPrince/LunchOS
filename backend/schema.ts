@@ -110,6 +110,7 @@ export async function initSchema() {
     await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS whatsapp_reminders BOOLEAN DEFAULT TRUE`);
     await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_read_only BOOLEAN DEFAULT FALSE`);
     await query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT`);
     await query(`UPDATE vendors SET is_suspended = FALSE WHERE is_suspended IS NULL`);
     await query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS on_system BOOLEAN DEFAULT TRUE`);
     await query(`UPDATE vendors SET on_system = TRUE WHERE on_system IS NULL`);
