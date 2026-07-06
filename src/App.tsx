@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import { Toaster } from 'react-hot-toast';
+import LandingPage from './components/LandingPage';
 
 import AdminDashboard from './components/AdminDashboard';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
@@ -25,7 +26,7 @@ function ProtectedRoute({ children, allowedRoles }: { children: ReactNode, allow
 
 function HomeRedirect() {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <LandingPage />;
   if (user.role === 'super_admin') return <Navigate to="/super-admin" />;
   if (user.role === 'admin') return <Navigate to="/admin" />;
   if (user.role === 'vendor') return <Navigate to="/vendor" />;
