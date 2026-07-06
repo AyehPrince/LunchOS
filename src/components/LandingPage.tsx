@@ -48,18 +48,19 @@ function Nav() {
           </div>
           <span className="font-bold text-lg tracking-tight">LunchOS</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/login"
-            className="hidden sm:block px-4 py-2 text-sm font-bold text-[#16231C]/70 hover:text-[#16231C] transition-colors"
+            className="px-3 sm:px-4 py-2 text-sm font-bold text-[#16231C]/70 hover:text-[#16231C] transition-colors"
           >
             Log in
           </Link>
           <Link
             to="/register"
-            className="px-4 py-2.5 bg-[#1F4D3A] text-white rounded-full text-sm font-bold hover:bg-[#173a2c] transition-colors"
+            className="px-4 py-2.5 bg-[#1F4D3A] text-white rounded-full text-sm font-bold hover:bg-[#173a2c] transition-colors whitespace-nowrap"
           >
-            Register your company
+            <span className="sm:hidden">Register</span>
+            <span className="hidden sm:inline">Register your company</span>
           </Link>
         </div>
       </div>
