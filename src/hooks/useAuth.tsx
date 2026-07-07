@@ -31,6 +31,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(JSON.parse(savedUser));
     }
     setIsLoading(false);
+
+    // If the page is restored from the browser's back/forward cache (bfcache),
+    // React's in-memory state is frozen exactly as it was when you navigated away —
+    // including whichever account was logged in at that moment. Re-sync from
+    // localStorage whenever that happens so a stale, previously-logged-in
+    // session can never be shown again after pressing back.
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        const currentSavedUser = localStorage.getItem('lunchos_user');
+        setUser(currentSavedUser ? JSON.parse(currentSavedUser) : null);
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   const requestOtp = async (identifier: string) => {
