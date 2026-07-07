@@ -66,7 +66,9 @@ router.post('/request-otp', async (req, res) => {
       [identifier, otp, expires_at]
     );
 
-    console.log(`[OTP DEBUG] OTP for ${identifier}: ${otp}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[OTP DEBUG] OTP for ${identifier}: ${otp}`);
+    }
     
     // In production, send via SMS/Email
     const isEmail = identifier.includes('@');
