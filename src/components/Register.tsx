@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,8 +17,17 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+declare global {
+  interface Window {
+    turnstile?: any;
+    onTurnstileSuccess?: (token: string) => void;
+    onTurnstileExpired?: () => void;
+  }
+}
+
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const {
@@ -32,14 +41,31 @@ export default function Register() {
     },
   });
 
+  useEffect(() => {
+    window.onTurnstileSuccess = (token: string) => setTurnstileToken(token);
+    window.onTurnstileExpired = () => setTurnstileToken(null);
+    return () => {
+      delete window.onTurnstileSuccess;
+      delete window.onTurnstileExpired;
+    };
+  }, []);
+
   const onRegister = async (data: RegisterFormData) => {
+    if (!turnstileToken) {
+      toast.error('Please complete the verification challenge first');
+      return;
+    }
     setIsLoading(true);
     try {
-      await axios.post('/auth/register', data);
+      await axios.post('/auth/register', { ...data, turnstileToken });
       toast.success('Registration successful! You can now sign in.');
       navigate('/login');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed');
+      if (window.turnstile) {
+        window.turnstile.reset();
+        setTurnstileToken(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,11 +136,20 @@ export default function Register() {
                 ))}
               </div>
             </div>
+
+            <div className="col-span-full flex justify-center">
+              <div
+                className="cf-turnstile"
+                data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                data-callback="onTurnstileSuccess"
+                data-expired-callback="onTurnstileExpired"
+              />
+            </div>
           </div>
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !turnstileToken}
             className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-blue-600 text-white rounded-xl font-black text-lg hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-600/20"
           >
             {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Create My Account <ArrowRight className="w-5 h-5" /></>}

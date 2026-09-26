@@ -8,12 +8,37 @@ import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
+async function verifyTurnstile(token: string | undefined, remoteIp: string): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const params = new URLSearchParams();
+    params.append('secret', process.env.TURNSTILE_SECRET_KEY || '');
+    params.append('response', token);
+    params.append('remoteip', remoteIp);
+
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: params,
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (err) {
+    console.error('Turnstile verification error:', err);
+    return false;
+  }
+}
+
 // Institution Registration
 router.post('/register', async (req, res) => {
-  const { companyName, adminName, email, phone, employeeRange } = req.body;
+  const { companyName, adminName, email, phone, employeeRange, turnstileToken } = req.body;
 
   if (!companyName || !adminName || !email) {
     return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  const isHuman = await verifyTurnstile(turnstileToken, req.ip || '');
+  if (!isHuman) {
+    return res.status(400).json({ message: 'Verification failed. Please complete the challenge and try again.' });
   }
 
   // Map ranges to limits
