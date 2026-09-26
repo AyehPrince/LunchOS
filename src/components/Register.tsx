@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, ArrowRight, Building2, User, Mail, Users } from 'lucide-react';
+import { Loader2, ArrowRight, Building2, User, Mail, Users, AlertTriangle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from '../lib/axios';
 import toast from 'react-hot-toast';
@@ -28,6 +28,7 @@ declare global {
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileFailed, setTurnstileFailed] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -42,11 +43,24 @@ export default function Register() {
   });
 
   useEffect(() => {
-    window.onTurnstileSuccess = (token: string) => setTurnstileToken(token);
+    window.onTurnstileSuccess = (token: string) => {
+      setTurnstileToken(token);
+      setTurnstileFailed(false);
+    };
     window.onTurnstileExpired = () => setTurnstileToken(null);
+
+    // If the widget hasn't succeeded within 8 seconds, assume it failed to load/render
+    const failTimer = setTimeout(() => {
+      setTurnstileToken((current) => {
+        if (!current) setTurnstileFailed(true);
+        return current;
+      });
+    }, 8000);
+
     return () => {
       delete window.onTurnstileSuccess;
       delete window.onTurnstileExpired;
+      clearTimeout(failTimer);
     };
   }, []);
 
@@ -137,13 +151,21 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="col-span-full flex justify-center">
+            <div className="col-span-full flex flex-col items-center gap-3">
               <div
                 className="cf-turnstile"
                 data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                 data-callback="onTurnstileSuccess"
                 data-expired-callback="onTurnstileExpired"
               />
+              {turnstileFailed && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-left">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 font-medium">
+                    Verification didn't load. This is often caused by an ad blocker, VPN extension, or strict privacy settings. Try disabling extensions or switching browsers, then refresh the page.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
